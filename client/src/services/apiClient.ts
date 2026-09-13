@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-// In dev, Vite proxies /api → localhost:5000.
-// In production, set VITE_API_BASE to your server URL (e.g. https://lab-planner-api.onrender.com/api).
-const baseURL = import.meta.env.VITE_API_BASE || '/api';
+// API base URL resolution:
+//   1. VITE_API_BASE env var (set this to override per environment)
+//   2. Hardcoded production default (Render deployment)
+//   3. /api (Vite dev proxy in dev)
+// To redeploy the backend, update the FALLBACK_API_BASE constant below.
+const FALLBACK_API_BASE = 'https://lab-planner-api.onrender.com/api';
+const baseURL = import.meta.env.VITE_API_BASE || FALLBACK_API_BASE || '/api';
 
 export const TOKEN_KEY = 'lab-planner-token';
 
