@@ -1,0 +1,13 @@
+# Server (Node + Express + Mongoose)
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# In-memory MongoDB test artifacts (mongodb-memory-server)
+.mongodb-binaries/
+.smoke-mongo/

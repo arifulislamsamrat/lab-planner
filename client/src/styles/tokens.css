@@ -1,0 +1,191 @@
+/* =========================================================================
+   Design Tokens — Light (default) + Dark
+   Modern, decorative, generous spacing. Activated by [data-theme="dark"] on
+   <html>. The light theme is the default; theme toggle swaps the attribute.
+   ========================================================================= */
+
+:root {
+  /* --- Type --- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --text-3xl: 34px;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.55;
+
+  /* --- Spacing (4-pt grid, generous) --- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+
+  /* --- Radii --- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  /* --- Brand palette (decorative: violet → indigo → cyan gradients) --- */
+  --brand-50:  #f3f0ff;
+  --brand-100: #e9e2ff;
+  --brand-200: #d3c4ff;
+  --brand-300: #b69bff;
+  --brand-400: #9778fa;
+  --brand-500: #7c5cf2;
+  --brand-600: #6841e6;
+  --brand-700: #5a32cf;
+  --brand-800: #4a28ad;
+  --brand-900: #3a1f8c;
+
+  --accent-cyan:    #06b6d4;
+  --accent-emerald: #10b981;
+  --accent-amber:   #f59e0b;
+  --accent-rose:    #f43f5e;
+
+  /* --- Surface stack (light) --- */
+  --color-bg:           #f6f7fb;
+  --color-bg-pattern:   #eef0f7;
+  --color-surface:      #ffffff;
+  --color-surface-2:    #f9fafd;
+  --color-surface-3:    #f1f3f9;
+  --color-overlay:      rgba(15, 17, 36, 0.55);
+
+  --color-border:        #e6e8f0;
+  --color-border-strong: #d4d7e3;
+  --color-border-soft:   #eef0f6;
+
+  --color-text:         #14172b;
+  --color-text-strong:  #08091a;
+  --color-text-muted:   #5b6178;
+  --color-text-subtle:  #8a91a8;
+
+  --color-primary:        var(--brand-600);
+  --color-primary-hover:  var(--brand-700);
+  --color-primary-soft:   #efeaff;
+  --color-primary-fg:     #ffffff;
+
+  --color-danger:        #e0414c;
+  --color-danger-hover:  #c0303b;
+  --color-danger-soft:   #fdecee;
+  --color-warning:        #d97706;
+  --color-success:        #0a9d6b;
+
+  /* --- Brand gradients (decorative) --- */
+  --grad-brand:     linear-gradient(135deg, #7c5cf2 0%, #5a32cf 100%);
+  --grad-brand-hi:  linear-gradient(135deg, #9778fa 0%, #6841e6 100%);
+  --grad-aurora:    linear-gradient(135deg, #9778fa 0%, #06b6d4 100%);
+  --grad-sunrise:   linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%);
+  --grad-mint:      linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  --grad-sky:       linear-gradient(135deg, #74c0fc 0%, #9778fa 100%);
+
+  --grad-page: radial-gradient(1200px 600px at 0% -10%, rgba(124,92,242,0.10), transparent 60%),
+               radial-gradient(900px 500px at 100% 10%, rgba(6,182,212,0.10), transparent 60%),
+               linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-pattern) 100%);
+
+  /* --- Shadows (layered, decorative) --- */
+  --shadow-xs: 0 1px 2px rgba(15,17,36,0.04);
+  --shadow-sm: 0 2px 4px rgba(15,17,36,0.04), 0 1px 2px rgba(15,17,36,0.04);
+  --shadow-md: 0 8px 16px -8px rgba(15,17,36,0.10), 0 2px 4px rgba(15,17,36,0.05);
+  --shadow-lg: 0 24px 40px -20px rgba(15,17,36,0.16), 0 4px 8px rgba(15,17,36,0.06);
+  --shadow-xl: 0 40px 64px -24px rgba(15,17,36,0.22), 0 8px 16px rgba(15,17,36,0.06);
+  --shadow-glow-brand: 0 0 0 4px rgba(124,92,242,0.18);
+  --shadow-glow-cyan:  0 0 0 4px rgba(6,182,212,0.18);
+  --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.6);
+
+  /* --- Status palette (subtle, with colored ring on dark) --- */
+  --status-backlog-bg:     #eef0f5;  --status-backlog-fg:    #4b5366;
+  --status-planned-bg:     #e0eaff;  --status-planned-fg:    #1e4ec0;
+  --status-in-progress-bg: #fff1d6;  --status-in-progress-fg:#a86200;
+  --status-review-bg:      #ece1ff;  --status-review-fg:     #5a32cf;
+  --status-done-bg:        #d4f7e3;  --status-done-fg:       #0a7e54;
+
+  --status-active-bg:      #d4f7e3;  --status-active-fg:     #0a7e54;
+  --status-draft-bg:       #eef0f5;  --status-draft-fg:      #4b5366;
+  --status-archived-bg:    #fbe1e1;  --status-archived-fg:   #b3263a;
+
+  /* --- Transitions --- */
+  --t-fast: 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-med:  200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-slow: 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* =========================================================================
+   DARK THEME
+   ========================================================================= */
+:root[data-theme="dark"] {
+  --color-bg:           #0b0d18;
+  --color-bg-pattern:   #11132a;
+  --color-surface:      #151831;
+  --color-surface-2:    #1b1f3f;
+  --color-surface-3:    #232855;
+  --color-overlay:      rgba(2, 4, 16, 0.72);
+
+  --color-border:        #232855;
+  --color-border-strong: #2f3672;
+  --color-border-soft:   #1c2050;
+
+  --color-text:         #e7e9f7;
+  --color-text-strong:  #ffffff;
+  --color-text-muted:   #9aa1c4;
+  --color-text-subtle:  #6e759b;
+
+  --color-primary:        #9778fa;
+  --color-primary-hover:  #b69bff;
+  --color-primary-soft:   #2a2160;
+  --color-primary-fg:     #0b0d18;
+
+  --color-danger:        #ff5c66;
+  --color-danger-hover:  #ff7a83;
+  --color-danger-soft:   #3a1320;
+
+  /* gradients — slightly muted to not blow out dark surfaces */
+  --grad-brand:     linear-gradient(135deg, #9778fa 0%, #6841e6 100%);
+  --grad-brand-hi:  linear-gradient(135deg, #b69bff 0%, #9778fa 100%);
+  --grad-aurora:    linear-gradient(135deg, #b69bff 0%, #06b6d4 100%);
+  --grad-sunrise:   linear-gradient(135deg, #fbbf24 0%, #f43f5e 100%);
+  --grad-mint:      linear-gradient(135deg, #34d399 0%, #06b6d4 100%);
+  --grad-sky:       linear-gradient(135deg, #60a5fa 0%, #b69bff 100%);
+
+  --grad-page: radial-gradient(1200px 600px at 0% -10%, rgba(151,120,250,0.18), transparent 60%),
+               radial-gradient(900px 500px at 100% 10%, rgba(6,182,212,0.12), transparent 60%),
+               linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-pattern) 100%);
+
+  /* deeper, more saturated shadows + glows */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.30);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md: 0 8px 16px -8px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.25);
+  --shadow-lg: 0 24px 40px -20px rgba(0,0,0,0.55), 0 4px 8px rgba(0,0,0,0.30);
+  --shadow-xl: 0 40px 64px -24px rgba(0,0,0,0.65), 0 8px 16px rgba(0,0,0,0.30);
+  --shadow-glow-brand: 0 0 0 4px rgba(151,120,250,0.28);
+  --shadow-glow-cyan:  0 0 0 4px rgba(6,182,212,0.28);
+  --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.05);
+
+  /* status (deeper tints + bright fg for AA contrast) */
+  --status-backlog-bg:     #232855;  --status-backlog-fg:    #c2c8e0;
+  --status-planned-bg:     #1e2c6e;  --status-planned-fg:    #b4c8ff;
+  --status-in-progress-bg: #4a330c;  --status-in-progress-fg:#ffd58a;
+  --status-review-bg:      #2e1f5a;  --status-review-fg:     #d4c2ff;
+  --status-done-bg:        #0f3d2a;  --status-done-fg:       #95e8c1;
+
+  --status-active-bg:      #0f3d2a;  --status-active-fg:     #95e8c1;
+  --status-draft-bg:       #232855;  --status-draft-fg:      #c2c8e0;
+  --status-archived-bg:    #4a1a22;  --status-archived-fg:   #ffb0b8;
+}

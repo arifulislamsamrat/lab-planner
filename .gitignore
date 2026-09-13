@@ -1,0 +1,64 @@
+# ====================================================================
+#  Lab Planner — .gitignore
+# ====================================================================
+
+# ---------- Logs ----------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Build / dist ----------
+# Server: none (Node, no build)
+# Client: Vite output
+client/dist/
+client/dist-ssr/
+
+# ---------- Dependencies ----------
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# ---------- Test / coverage ----------
+coverage/
+.nyc_output/
+
+# ---------- Env / secrets ----------
+# IMPORTANT: never commit real credentials.
+.env
+.env.local
+.env.*.local
+
+# ---------- Editor / OS ----------
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+
+# ---------- TypeScript / Vite ----------
+*.tsbuildinfo
+
+# ---------- Local Mongo helper data (start-mongo.ps1) ----------
+mongo-data/
+mongo-log/
+
+# ---------- Nodemon ----------
+.nodemon.json
+
+# ---------- Smoke test artifacts ----------
+server/.smoke-mongo/
