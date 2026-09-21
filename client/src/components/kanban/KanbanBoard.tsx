@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import {
   DndContext,
   PointerSensor,
@@ -12,7 +21,8 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link } from 'react-router-dom';
-import StatusBadge from '../common/StatusBadge';
+import ActionMenu from '../common/ActionMenu';
+import ShareButton from '../common/ShareButton';
 import { LAB_STATUSES, LAB_STATUS_LABELS, ASSIGNMENT_ROLES } from '../../utils/constants';
 import { useAuth } from '../../hooks/useAuth';
 import { useAssignLab, useUnassignLab } from '../../hooks/useLab';
@@ -103,8 +113,6 @@ export default function KanbanBoard(props: Props) {
   }, [entriesAll, filters, statusFilter]);
 
   const courseIds = useMemo(() => Array.from(new Set(entriesAll.map((e) => e.courseId))), [entriesAll]);
-  // We only call status updates on the first courseId for simplicity; the
-  // endpoint does not depend on courseId on the client side anyway.
   const primaryCourseId = courseIds[0] ?? '';
   const updateStatus = useUpdateLabStatus(primaryCourseId);
   const reorderAcross = useReorderLabsAcross(primaryCourseId);
@@ -112,10 +120,8 @@ export default function KanbanBoard(props: Props) {
   const [byStatus, setByStatus] = useState<Record<LabStatus, KanbanLabEntry[]>>(() => bucket(labs));
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  // Sync local state from upstream labs (server refetch / filter changes).
   useEffect(() => {
     setByStatus(bucket(labs));
-    // We intentionally only re-sync on labs change, not on bucket fn identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [labs]);
 
@@ -199,7 +205,7 @@ export default function KanbanBoard(props: Props) {
   }, [entriesAll, filters.moduleId]);
 
   return (
-    <div>
+    <div className="kanban-shell">
       <div className="row mb-4" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
         <select
           className="select"
@@ -280,12 +286,12 @@ function KanbanColumn({
     <SortableContext id={status} items={entries.map((e) => e.lab._id)} strategy={verticalListSortingStrategy}>
       <div className={`kanban-col kanban-col-${status}`}>
         <div className="kanban-col-header">
-          <span>{LAB_STATUS_LABELS[status]}</span>
+          <span className="kanban-col-title">{LAB_STATUS_LABELS[status]}</span>
           <span className="count">{entries.length}</span>
         </div>
         <div className="kanban-col-body" data-status={status}>
           {entries.length === 0 && (
-            <div className="muted" style={{ textAlign: 'center', fontSize: 12, padding: 8 }}>Drop labs here</div>
+            <div className="muted" style={{ textAlign: 'center', fontSize: 12, padding: 12 }}>Drop labs here</div>
           )}
           {entries.map((entry) => (
             <KanbanCard
@@ -320,57 +326,194 @@ function KanbanCard({
   };
   const { user } = useAuth();
   const canAssign = !!user && ASSIGNMENT_ROLES.includes(user.role as never);
+  const canShare = !!user && ['ADMIN', 'COURSE_COORDINATOR', 'INSTRUCTOR'].includes(user.role);
+
+  // Allow the card's ⋮ menu to programmatically reopen the assignee popover
+  // (used by the "Reassign" menu item).
+  const assigneeRef = useRef<AssigneeChipHandle>(null);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`kanban-card ${dragging ? 'dragging' : ''} ${isOver ? 'over' : ''}`}
+      className={`kanban-card kanban-card--${entry.lab.status} ${dragging ? 'dragging' : ''} ${isOver ? 'over' : ''}`}
       {...attributes}
       {...listeners}
     >
-      <div className="title">
+      {/* Top row: status pill (left) + action menu (right).
+          Pointer events on these elements skip drag start. */}
+      <div className="kanban-card-top" onPointerDown={(e) => e.stopPropagation()}>
+        <StatusPill lab={entry.lab} />
+        <ActionMenu
+          label="Card actions"
+          align="right"
+          items={[
+            ...(canAssign
+              ? ([
+                  {
+                    label: 'Reassign',
+                    icon: '👤',
+                    onClick: () => assigneeRef.current?.open(),
+                  },
+                ] as const)
+              : []),
+            { label: 'Open', icon: '↗', onClick: () => { window.location.href = `/labs/${entry.lab._id}`; } },
+            { label: 'Set status', icon: '🔁', onClick: () => { /* set-status lives on the status pill itself */ } },
+            ...(canShare
+              ? ([
+                  {
+                    label: 'Share',
+                    icon: '🔗',
+                    onClick: () => { /* share button opens inline below */ },
+                  },
+                ] as const)
+              : []),
+          ]}
+        />
+      </div>
+
+      {/* Title row: this is the drag handle for dnd-kit. */}
+      <div className="kanban-card-title">
         <Link to={`/labs/${entry.lab._id}`} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
           {entry.lab.title}
         </Link>
       </div>
-      <div className="meta">
-        <span>
-          {entry.lab.estimatedTime ? `${entry.lab.estimatedTime} min` : ''}
-          {showCourse && entry.courseTitle ? ` · ${entry.courseTitle}` : ''}
+
+      <div className="kanban-card-meta">
+        <span className="kanban-card-meta-path">
+          {showCourse && entry.courseTitle ? `${entry.courseTitle} · ` : ''}
+          {entry.moduleTitle}
         </span>
-        <StatusBadge status={entry.lab.status} />
+        {entry.lab.estimatedTime ? <span className="kanban-card-meta-time">~{entry.lab.estimatedTime} min</span> : null}
       </div>
+
       <div className="kanban-card-footer" onPointerDown={(e) => e.stopPropagation()}>
-        <AssigneeChip lab={entry.lab} canAssign={canAssign} />
+        <AssigneeChip ref={assigneeRef} lab={entry.lab} canAssign={canAssign} />
+        {canShare && (
+          <ShareButton
+            kind="LAB_README"
+            refId={entry.lab._id}
+            label="Share"
+            description="Anyone with the link can view this lab's readme in their browser. No login required."
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function AssigneeChip({ lab, canAssign }: { lab: Lab; canAssign: boolean }) {
+function StatusPill({ lab }: { lab: Lab }) {
+  const updateStatus = useUpdateLabStatus('');
+  const items = LAB_STATUSES.map((s) => ({
+    label: LAB_STATUS_LABELS[s],
+    icon: s === lab.status ? '✓' : undefined,
+    onClick: () => {
+      if (s !== lab.status) updateStatus.mutate({ id: lab._id, status: s });
+    },
+  }));
+  return (
+    <ActionMenu
+      label={`Status: ${LAB_STATUS_LABELS[lab.status]}. Click to change.`}
+      align="left"
+      items={items}
+      trigger={
+        <span className={`kanban-status-pill kanban-status-pill--${lab.status}`}>
+          <span className="dot" aria-hidden="true" />
+          {LAB_STATUS_LABELS[lab.status]}
+        </span>
+      }
+    />
+  );
+}
+
+// === Assignee chip + popover ===
+
+export interface AssigneeChipHandle {
+  open: () => void;
+  close: () => void;
+}
+
+interface AssigneePopoverPosition {
+  top: number;
+  left: number;
+  width: number;
+  upward: boolean;
+}
+
+function computePopoverPosition(triggerEl: HTMLElement | null): AssigneePopoverPosition | null {
+  if (!triggerEl) return null;
+  const rect = triggerEl.getBoundingClientRect();
+  const width = 280;
+  const margin = 8;
+  const maxHeight = 280;
+
+  // Prefer downward; if not enough space, flip upward.
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const upward = spaceBelow < maxHeight + margin && rect.top > spaceBelow;
+  const top = upward
+    ? Math.max(margin, rect.top - 8 - maxHeight) // approximate; menu height capped by inner content + scroll
+    : rect.bottom + margin;
+
+  let left: number;
+  // Align popover's left edge with trigger's left edge, but clamp inside viewport.
+  left = rect.left;
+  if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+  if (left < margin) left = margin;
+
+  return { top, left, width, upward };
+}
+
+const AssigneeChip = forwardRef<AssigneeChipHandle, { lab: Lab; canAssign: boolean }>(function AssigneeChip(
+  { lab, canAssign },
+  ref,
+) {
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: userApi.list });
   const assign = useAssignLab();
   const unassign = useUnassignLab();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<AssigneePopoverPosition | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    open: () => setOpen(true),
+    close: () => setOpen(false),
+  }));
+
+  // Reposition when opening, on scroll, and on resize.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    const recompute = () => setPos(computePopoverPosition(triggerRef.current));
+    recompute();
+    window.addEventListener('resize', recompute);
+    window.addEventListener('scroll', recompute, true);
+    return () => {
+      window.removeEventListener('resize', recompute);
+      window.removeEventListener('scroll', recompute, true);
+    };
+  }, [open]);
 
   useEffect(() => {
+    if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t)) return;
+      const pop = document.getElementById(`assignee-pop-${lab._id}`);
+      if (pop?.contains(t)) return;
+      setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
-    if (open) {
-      document.addEventListener('mousedown', onDoc);
-      document.addEventListener('keydown', onKey);
-      return () => {
-        document.removeEventListener('mousedown', onDoc);
-        document.removeEventListener('keydown', onKey);
-      };
-    }
-  }, [open]);
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, lab._id]);
 
   const assignedUser: User | undefined = (users ?? []).find((u) => u.id === lab.assignedMinionId);
   const minions: User[] = (users ?? []).filter((u) => u.role === 'MINION' && u.isActive);
@@ -378,15 +521,16 @@ function AssigneeChip({ lab, canAssign }: { lab: Lab; canAssign: boolean }) {
   if (!canAssign) {
     return (
       <span className={`kanban-assignee ${assignedUser ? '' : 'kanban-assignee--empty'}`}>
-        <span aria-hidden="true">👤</span>
-        <span>{assignedUser ? assignedUser.name : 'Unassigned'}</span>
+        <span className="kanban-assignee-avatar" aria-hidden="true">👤</span>
+        <span className="kanban-assignee-name">{assignedUser ? assignedUser.name : 'Unassigned'}</span>
       </span>
     );
   }
 
   return (
-    <div className="kanban-assignee-wrap" ref={ref}>
+    <>
       <button
+        ref={triggerRef}
         type="button"
         className={`kanban-assignee ${assignedUser ? '' : 'kanban-assignee--empty'}`}
         onClick={() => setOpen((o) => !o)}
@@ -395,43 +539,78 @@ function AssigneeChip({ lab, canAssign }: { lab: Lab; canAssign: boolean }) {
         title={assignedUser ? `Assigned to ${assignedUser.name}. Click to change.` : 'Click to assign a minion'}
         disabled={assign.isPending || unassign.isPending}
       >
-        <span aria-hidden="true">👤</span>
-        <span>{assignedUser ? assignedUser.name : 'Assign…'}</span>
+        <span className="kanban-assignee-avatar" aria-hidden="true">👤</span>
+        <span className="kanban-assignee-name">{assignedUser ? assignedUser.name : 'Assign…'}</span>
       </button>
-      {open && (
-        <div className="kanban-assignee-pop" role="menu">
-          {minions.length === 0 && (
-            <div className="muted" style={{ padding: 8, fontSize: 12 }}>No active minions yet — add one in Users.</div>
+      {open && pos && createPortal(
+        <div
+          id={`assignee-pop-${lab._id}`}
+          className="kanban-assignee-pop"
+          role="menu"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            maxHeight: 280,
+            zIndex: 99999,
+          }}
+        >
+          <div className="kanban-assignee-pop-head">
+            <span>Assign minion</span>
+          </div>
+          {minions.length === 0 ? (
+            <div className="muted" style={{ padding: 12, fontSize: 12 }}>
+              No active minions yet — add one in Users first.
+            </div>
+          ) : (
+            <div className="kanban-assignee-pop-list">
+              {minions.map((u) => {
+                const initials = (u.name || u.email).slice(0, 2).toUpperCase();
+                const isAssigned = lab.assignedMinionId === u.id;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    role="menuitem"
+                    className={`kanban-assignee-pop-row ${isAssigned ? 'is-assigned' : ''}`}
+                    disabled={assign.isPending}
+                    onClick={() => {
+                      assign.mutate({ labId: lab._id, minionId: u.id }, { onSuccess: () => setOpen(false) });
+                    }}
+                  >
+                    <span className="kanban-assignee-avatar" aria-hidden="true">{initials}</span>
+                    <span className="kanban-assignee-pop-meta">
+                      <span className="kanban-assignee-pop-name">{u.name}</span>
+                      <span className="kanban-assignee-pop-email">{u.email}</span>
+                    </span>
+                    {isAssigned && <span className="kanban-assignee-pop-check">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
           )}
-          {minions.map((u) => (
-            <button
-              key={u.id}
-              type="button"
-              role="menuitem"
-              className={`user-menu-item ${lab.assignedMinionId === u.id ? 'active' : ''}`}
-              onClick={() => {
-                assign.mutate({ labId: lab._id, minionId: u.id }, { onSuccess: () => setOpen(false) });
-              }}
-            >
-              <span>{u.name}</span>
-              <span className="muted" style={{ fontSize: 11, marginLeft: 6 }}>{u.email}</span>
-            </button>
-          ))}
           {assignedUser && (
             <>
               <div className="action-menu-divider" role="separator" />
               <button
                 type="button"
                 role="menuitem"
-                className="user-menu-item danger"
+                className="kanban-assignee-pop-row danger"
+                disabled={unassign.isPending}
                 onClick={() => unassign.mutate(lab._id, { onSuccess: () => setOpen(false) })}
               >
-                Unassign
+                <span className="kanban-assignee-avatar danger" aria-hidden="true">⊘</span>
+                <span className="kanban-assignee-pop-meta">
+                  <span className="kanban-assignee-pop-name">Unassign</span>
+                  <span className="kanban-assignee-pop-email">Remove current assignee</span>
+                </span>
               </button>
             </>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
-}
+});
