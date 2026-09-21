@@ -96,8 +96,14 @@ export default function MilestoneItem({ courseId, milestone, onEdit, onDelete }:
                       />
                     </div>
                     <div className="row" style={{ gap: 4, alignItems: 'flex-start', paddingTop: 12 }}>
-                      <button className="button ghost icon" disabled={idx === 0} onClick={() => moveModule(m, -1)} title="Move up">↑</button>
-                      <button className="button ghost icon" disabled={idx === milestone.modules.length - 1} onClick={() => moveModule(m, 1)} title="Move down">↓</button>
+                      <ActionMenu
+                        label="Reorder module"
+                        align="right"
+                        items={[
+                          { label: 'Move up', icon: '↑', onClick: () => moveModule(m, -1), disabled: idx === 0 },
+                          { label: 'Move down', icon: '↓', onClick: () => moveModule(m, 1), disabled: idx === milestone.modules.length - 1 },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>

@@ -92,8 +92,14 @@ export default function ModuleItem({ courseId, moduleEntity, onEdit, onDelete }:
                       />
                     </div>
                     <div className="row" style={{ gap: 4, alignItems: 'flex-start', paddingTop: 12 }}>
-                      <button className="button ghost icon" disabled={idx === 0} onClick={() => moveGroup(g, -1)} title="Move up">↑</button>
-                      <button className="button ghost icon" disabled={idx === moduleEntity.labGroups.length - 1} onClick={() => moveGroup(g, 1)} title="Move down">↓</button>
+                      <ActionMenu
+                        label="Reorder lab group"
+                        align="right"
+                        items={[
+                          { label: 'Move up', icon: '↑', onClick: () => moveGroup(g, -1), disabled: idx === 0 },
+                          { label: 'Move down', icon: '↓', onClick: () => moveGroup(g, 1), disabled: idx === moduleEntity.labGroups.length - 1 },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>

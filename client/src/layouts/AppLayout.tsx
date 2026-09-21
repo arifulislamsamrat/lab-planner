@@ -56,6 +56,13 @@ const MenuIcon = () => (
   </svg>
 );
 
+const CloseIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+  </svg>
+);
+
 const ChevronLeftIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="15 18 9 12 15 6" />
@@ -152,13 +159,56 @@ function UserMenu() {
   );
 }
 
-export default function AppLayout() {
+function SidebarContents({ showCloseButton = false, onClose }: { showCloseButton?: boolean; onClose?: () => void }) {
   const { user } = useAuth();
-  const { desktop, mobileOpen, isMobile, toggleDesktop, closeMobile } = useSidebar();
-  const location = useLocation();
   const showSettings = !!user && SETTINGS_USERS_ROLES.includes(user.role);
   const showDanger = !!user && SETTINGS_DANGER_ROLES.includes(user.role);
   const showMyLabs = !!user && MY_LABS_ROLES.includes(user.role);
+
+  return (
+    <>
+      {showCloseButton && (
+        <button
+          type="button"
+          className="sidebar-close-btn"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          <CloseIcon />
+        </button>
+      )}
+      <div className="sidebar-section">Workspace</div>
+      <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <span className="nav-icon"><DashboardIcon /></span>
+        <span className="nav-label">Dashboard</span>
+      </NavLink>
+      <NavLink to="/courses" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <span className="nav-icon"><CoursesIcon /></span>
+        <span className="nav-label">{user ? coursesLabel(user.role) : 'Courses'}</span>
+      </NavLink>
+      {showMyLabs && (
+        <NavLink to="/my-labs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <span className="nav-icon"><MyLabsIcon /></span>
+          <span className="nav-label">My Labs</span>
+        </NavLink>
+      )}
+
+      {(showSettings || showDanger) && (
+        <>
+          <div className="sidebar-section">Administration</div>
+          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <span className="nav-icon"><SettingsIcon /></span>
+            <span className="nav-label">Settings</span>
+          </NavLink>
+        </>
+      )}
+    </>
+  );
+}
+
+export default function AppLayout() {
+  const { desktop, mobileOpen, isMobile, toggleDesktop, toggleMobile, closeMobile } = useSidebar();
+  const location = useLocation();
 
   // Close mobile drawer on route change.
   useEffect(() => {
@@ -178,7 +228,7 @@ export default function AppLayout() {
           <button
             type="button"
             className="hamburger-btn"
-            onClick={toggleDesktop}
+            onClick={toggleMobile}
             aria-label="Open menu"
             aria-expanded={mobileOpen}
           >
@@ -186,11 +236,6 @@ export default function AppLayout() {
           </button>
         )}
         <Link to="/" className="brand" aria-label="Lab Planner home">
-          <img
-            src="https://s3.brilliant.com.bd/blog-bucket/thumbnail/8c5225dc-da97-48ab-9736-37d815e14439.png"
-            alt="Lab Planner"
-            className="brand-logo"
-          />
           <span className="brand-text">Lab Planner</span>
         </Link>
         <SearchBar />
@@ -200,15 +245,8 @@ export default function AppLayout() {
         </div>
       </header>
       <div className="app-body">
-        {isMobile && mobileOpen && (
-          <div
-            className="sidebar-backdrop"
-            onClick={closeMobile}
-            aria-hidden="true"
-          />
-        )}
-        <aside className={sidebarClasses} aria-hidden={isMobile && !mobileOpen}>
-          {!isMobile && (
+        {!isMobile && (
+          <aside className={sidebarClasses}>
             <button
               type="button"
               className="sidebar-collapse-btn"
@@ -218,37 +256,27 @@ export default function AppLayout() {
             >
               {desktop === 'expanded' ? <ChevronLeftIcon /> : <ChevronRightIcon />}
             </button>
-          )}
-          <div className="sidebar-section">Workspace</div>
-          <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span className="nav-icon"><DashboardIcon /></span>
-            <span className="nav-label">Dashboard</span>
-          </NavLink>
-          <NavLink to="/courses" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span className="nav-icon"><CoursesIcon /></span>
-            <span className="nav-label">{user ? coursesLabel(user.role) : 'Courses'}</span>
-          </NavLink>
-          {showMyLabs && (
-            <NavLink to="/my-labs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-              <span className="nav-icon"><MyLabsIcon /></span>
-              <span className="nav-label">My Labs</span>
-            </NavLink>
-          )}
-
-          {(showSettings || showDanger) && (
-            <>
-              <div className="sidebar-section">Administration</div>
-              <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <span className="nav-icon"><SettingsIcon /></span>
-                <span className="nav-label">Settings</span>
-              </NavLink>
-            </>
-          )}
-        </aside>
+            <SidebarContents />
+          </aside>
+        )}
         <main className="app-main">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile drawer — sibling of .app-body so position:fixed is viewport-relative. */}
+      {isMobile && mobileOpen && (
+        <>
+          <div
+            className="sidebar-backdrop"
+            onClick={closeMobile}
+            aria-hidden="true"
+          />
+          <aside className="app-sidebar sidebar-mobile">
+            <SidebarContents showCloseButton onClose={closeMobile} />
+          </aside>
+        </>
+      )}
     </div>
   );
 }

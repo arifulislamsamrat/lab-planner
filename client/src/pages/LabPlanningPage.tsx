@@ -16,6 +16,7 @@ import EmptyState from '../components/common/EmptyState';
 import Breadcrumb from '../components/common/Breadcrumb';
 import { Skeleton, SkeletonPageHeader, SkeletonLines } from '../components/common/Skeleton';
 import KanbanBoard from '../components/kanban/KanbanBoard';
+import ActionMenu from '../components/common/ActionMenu';
 
 type View = 'hierarchy' | 'board';
 
@@ -116,8 +117,14 @@ export default function LabPlanningPage() {
                   />
                 </div>
                 <div className="row" style={{ gap: 4, alignItems: 'flex-start', paddingTop: 12 }}>
-                  <button className="button ghost icon" disabled={idx === 0} onClick={() => moveMilestone(m, -1)} title="Move up">↑</button>
-                  <button className="button ghost icon" disabled={idx === planning.milestones.length - 1} onClick={() => moveMilestone(m, 1)} title="Move down">↓</button>
+                  <ActionMenu
+                    label="Reorder milestone"
+                    align="right"
+                    items={[
+                      { label: 'Move up', icon: '↑', onClick: () => moveMilestone(m, -1), disabled: idx === 0 },
+                      { label: 'Move down', icon: '↓', onClick: () => moveMilestone(m, 1), disabled: idx === planning.milestones.length - 1 },
+                    ]}
+                  />
                 </div>
               </div>
             ))}

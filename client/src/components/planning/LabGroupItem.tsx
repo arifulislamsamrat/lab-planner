@@ -25,7 +25,11 @@ interface Props {
 export default function LabGroupItem({ courseId, labGroup, onEdit, onDelete }: Props) {
   const { user } = useAuth();
   const canAssign = !!user && ASSIGNMENT_ROLES.includes(user.role as never);
-  const [open, setOpen] = useState(false);
+  // Auto-expand on phones (<640px) so the user doesn't have to tap each level.
+  const [open, setOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 640;
+  });
   const [creating, setCreating] = useState(false);
   const [editingLab, setEditingLab] = useState<Lab | null>(null);
   const [deletingLab, setDeletingLab] = useState<Lab | null>(null);
@@ -97,8 +101,14 @@ export default function LabGroupItem({ courseId, labGroup, onEdit, onDelete }: P
                   />
                 </div>
                 <div className="row" style={{ gap: 4 }}>
-                  <button className="button ghost icon" disabled={idx === 0} onClick={() => moveLab(lab, -1)} title="Move up">↑</button>
-                  <button className="button ghost icon" disabled={idx === labGroup.labs.length - 1} onClick={() => moveLab(lab, 1)} title="Move down">↓</button>
+                  <ActionMenu
+                    label="Reorder lab"
+                    align="right"
+                    items={[
+                      { label: 'Move up', icon: '↑', onClick: () => moveLab(lab, -1), disabled: idx === 0 },
+                      { label: 'Move down', icon: '↓', onClick: () => moveLab(lab, 1), disabled: idx === labGroup.labs.length - 1 },
+                    ]}
+                  />
                 </div>
               </div>
             ))
