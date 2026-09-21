@@ -626,14 +626,16 @@
 }
 
 /* === Kanban === */
-.kanban-shell { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.kanban-shell { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; overflow: hidden; }
 .kanban {
   display: grid;
-  grid-template-columns: repeat(5, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-4);
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
 }
 .kanban-col {
   background: var(--color-surface);
@@ -642,6 +644,7 @@
   display: flex; flex-direction: column;
   min-height: 220px;
   max-height: 100%;
+  min-width: 0;
   box-shadow: var(--shadow-xs);
   overflow: hidden;
 }
@@ -683,6 +686,8 @@
   display: flex; flex-direction: column;
   gap: var(--space-3);
   min-height: 100px;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   flex: 1;
 }
@@ -702,6 +707,10 @@
   /* Drag handle attached to title row; top row + meta + footer stop propagation */
   cursor: grab;
   border-left: 3px solid transparent;
+  /* Hard-cap the card to its column width so long titles/meta can't push the column wide. */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .kanban-card:hover {
   box-shadow: var(--shadow-md);
@@ -719,16 +728,33 @@
 .kanban-card-top {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
+  /* Allow flex children to shrink below their content size. */
+  min-width: 0;
+}
+.kanban-card-top > .kanban-status-pill,
+.kanban-card-top > .action-menu-trigger-wrap {
+  flex: 0 0 auto;
 }
 .kanban-card-title {
   font-weight: 600;
   font-size: var(--text-md);
   line-height: 1.3;
   cursor: grab;
+  min-width: 0;
+  /* Clamp long titles to two lines with ellipsis. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 .kanban-card-title a {
   color: var(--color-text-strong);
   text-decoration: none;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kanban-card-title a:hover { color: var(--color-primary); text-decoration: underline; }
 .kanban-card-meta {
@@ -736,15 +762,26 @@
   gap: 6px;
   color: var(--color-text-muted);
   font-size: var(--text-xs);
+  min-width: 0;
 }
-.kanban-card-meta-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kanban-card-meta-time { white-space: nowrap; opacity: 0.8; }
+.kanban-card-meta-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.kanban-card-meta-time { white-space: nowrap; opacity: 0.8; flex: 0 0 auto; }
 .kanban-card-footer {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--color-border-soft);
+  min-width: 0;
 }
+.kanban-card-footer > .kanban-assignee { min-width: 0; flex: 1 1 auto; }
+.kanban-card-footer > .share-button-wrap,
+.kanban-card-footer > button { flex: 0 0 auto; }
 
 /* === Status pill (in-card) === */
 .kanban-status-pill {
@@ -760,6 +797,10 @@
   letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kanban-status-pill:hover { background: var(--color-surface); box-shadow: var(--shadow-sm); }
 .kanban-status-pill .dot {
@@ -790,9 +831,15 @@
   font-weight: 500;
   white-space: nowrap;
   max-width: 100%;
+  min-width: 0;
   overflow: hidden;
 }
-.kanban-assignee-name { overflow: hidden; text-overflow: ellipsis; }
+.kanban-assignee-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 auto;
+}
 .kanban-assignee--empty {
   background: transparent;
   color: var(--color-text-subtle);
@@ -2280,7 +2327,8 @@ button.node:focus-visible {
 .user-menu-item:hover:not(:disabled) { background: var(--color-surface-2); }
 .user-menu-item:disabled { opacity: 0.5; cursor: not-allowed; }
 .user-menu-item.danger { color: var(--color-danger); }
-.action-menu-trigger { font-size: 18px; line-height: 1; }
+.action-menu-trigger { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.action-menu-trigger-wrap { display: inline-flex; align-items: center; flex-shrink: 0; min-width: 0; }
 .action-menu-divider {
   height: 1px;
   background: var(--color-border);
