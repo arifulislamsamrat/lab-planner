@@ -42,6 +42,11 @@ export default function LoginPage() {
     <div className="auth-shell">
       <form className="card auth-card" onSubmit={handleSubmit}>
         <div className="auth-mark" aria-hidden="true">
+          <img
+            src="https://s3.brilliant.com.bd/blog-bucket/thumbnail/8c5225dc-da97-48ab-9736-37d815e14439.png"
+            alt=""
+            className="auth-logo"
+          />
           <span className="auth-mark-orb" />
           <span className="auth-mark-orb auth-mark-orb-2" />
         </div>

@@ -6,6 +6,7 @@ import App from './App';
 import { ToastHost } from './components/common/Toast';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
+import { SidebarProvider } from './context/SidebarContext';
 
 import './styles/reset.css';
 import './styles/tokens.css';
@@ -27,8 +28,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
-            <App />
-            <ToastHost />
+            <SidebarProvider>
+              <App />
+              <ToastHost />
+            </SidebarProvider>
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>

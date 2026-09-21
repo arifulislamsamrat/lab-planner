@@ -4,8 +4,8 @@ import { useCourse } from '../hooks/useCourses';
 import { useCoursePlanning } from '../hooks/useCoursePlanning';
 import Breadcrumb from '../components/common/Breadcrumb';
 import EmptyState from '../components/common/EmptyState';
-import Spinner from '../components/common/Spinner';
 import StatusBadge from '../components/common/StatusBadge';
+import { Skeleton, SkeletonPageHeader } from '../components/common/Skeleton';
 import RoadmapFlow from '../components/roadmap/RoadmapFlow';
 import RoadmapBreadcrumb from '../components/roadmap/RoadmapBreadcrumb';
 import type { BreadcrumbSegment, DrillTarget, Level } from '../components/roadmap/types';
@@ -98,7 +98,27 @@ export default function RoadmapPage() {
     return { milestones: planning.milestones.length, modules, groups, labs };
   }, [planning]);
 
-  if (courseLoading || planningLoading) return <Spinner label="Loading roadmap..." />;
+  if (courseLoading || planningLoading) {
+    return (
+      <>
+        <Breadcrumb items={[{ label: 'Courses', to: '/courses' }, { label: 'Loading…' }]} />
+        <SkeletonPageHeader />
+        <div style={{ display: 'flex', gap: 16, marginTop: 24, flexWrap: 'wrap' }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} height={90} width={200} radius="var(--radius-lg)" />
+          ))}
+        </div>
+        <div className="card skeleton-card" style={{ marginTop: 24 }}>
+          <Skeleton height={20} width="40%" />
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height={48} />
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
   if (!course || !planning) return <p>Course not found.</p>;
 
   return (

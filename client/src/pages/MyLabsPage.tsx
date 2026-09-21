@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useMyLabs } from '../hooks/useMyLabs';
 import { useAuth } from '../hooks/useAuth';
 import { useAcceptAssignment, useDeclineAssignment, useSubmitLab } from '../hooks/useLab';
-import Spinner from '../components/common/Spinner';
 import EmptyState from '../components/common/EmptyState';
 import StatusBadge from '../components/common/StatusBadge';
 import { MY_LAB_TABS, MY_LAB_TAB_LABELS, type MyLabTab } from '../utils/constants';
 import { ROLE_LABELS, type Lab } from '../types/domain';
+import { Skeleton } from '../components/common/Skeleton';
 
 function formatDate(s: string | null | undefined): string {
   if (!s) return '—';
@@ -132,7 +132,26 @@ export default function MyLabsPage() {
       </nav>
 
       {isLoading ? (
-        <Spinner label="Loading labs..." />
+        <div className="card skeleton-card" style={{ padding: 16 }}>
+          <Skeleton height={16} width="30%" />
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--color-border-soft)' }}
+              >
+                <Skeleton height={14} width="30%" />
+                <Skeleton height={14} width={80} />
+                <Skeleton height={14} width={80} />
+                <Skeleton height={14} width={120} />
+                <Skeleton height={14} width={120} />
+                <Skeleton height={14} width={120} />
+                <Skeleton height={14} width={120} />
+                <Skeleton height={28} width={80} radius="var(--radius-pill)" />
+              </div>
+            ))}
+          </div>
+        </div>
       ) : !labs || labs.length === 0 ? (
         <EmptyState
           title={`No ${MY_LAB_TAB_LABELS[tab].toLowerCase()} labs`}

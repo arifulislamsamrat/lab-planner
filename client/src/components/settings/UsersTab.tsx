@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { userApi } from '../../services/userApi';
 import UserFormModal from './UserFormModal';
 import ConfirmDialog from '../common/ConfirmDialog';
-import Spinner from '../common/Spinner';
 import { showToast, toastError } from '../common/Toast';
 import { ROLE_LABELS, type User } from '../../types/domain';
+import { Skeleton } from '../common/Skeleton';
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -47,7 +47,30 @@ export default function UsersTab() {
   const [creating, setCreating] = useState(false);
   const [disabling, setDisabling] = useState<User | null>(null);
 
-  if (isLoading) return <Spinner label="Loading users..." />;
+  if (isLoading) {
+    return (
+      <div className="card skeleton-card" style={{ padding: 16 }}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              gap: 16,
+              padding: '12px 0',
+              borderBottom: '1px solid var(--color-border-soft)',
+              alignItems: 'center',
+            }}
+          >
+            <Skeleton height={28} width={28} radius="50%" />
+            <Skeleton height={14} width="20%" />
+            <Skeleton height={14} width="30%" />
+            <Skeleton height={20} width={90} radius="var(--radius-pill)" />
+            <Skeleton height={20} width={70} radius="var(--radius-pill)" />
+          </div>
+        ))}
+      </div>
+    );
+  }
   const users = data ?? [];
 
   return (

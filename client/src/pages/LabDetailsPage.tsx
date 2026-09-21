@@ -8,7 +8,6 @@ import {
   useUpdateLabStatus,
 } from '../hooks/useLab';
 import StatusBadge from '../components/common/StatusBadge';
-import Spinner from '../components/common/Spinner';
 import Breadcrumb from '../components/common/Breadcrumb';
 import ResourceViewer from '../components/common/ResourceViewer';
 import ActionMenu, { type MenuItem } from '../components/common/ActionMenu';
@@ -22,6 +21,7 @@ import ReviewStages from '../components/lab/ReviewStages';
 import { useAuth } from '../hooks/useAuth';
 import { ASSIGNMENT_ROLES, LAB_STATUSES, LAB_STATUS_LABELS } from '../utils/constants';
 import type { Lab } from '../types/domain';
+import { Skeleton, SkeletonPageHeader, SkeletonLines } from '../components/common/Skeleton';
 
 const LAB_WRITE_ROLES = ['ADMIN', 'COURSE_COORDINATOR', 'MINION'];
 const LAB_STATUS_ROLES = ['ADMIN', 'COURSE_COORDINATOR', 'INSTRUCTOR', 'MINION'];
@@ -59,7 +59,50 @@ export default function LabDetailsPage() {
     }
   }, [lab]);
 
-  if (isLoading) return <Spinner label="Loading lab..." />;
+  if (isLoading) {
+    return (
+      <>
+        <Breadcrumb items={[{ label: 'Courses', to: '/courses' }, { label: 'Loading…' }]} />
+        <div className="lab-row" style={{ marginBottom: 'var(--space-4)' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="row" style={{ gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+              <SkeletonPageHeader />
+            </div>
+            <Skeleton height={14} width="60%" style={{ marginTop: 8 }} />
+          </div>
+          <div className="lab-row-actions">
+            <Skeleton height={28} width={110} radius="var(--radius-pill)" />
+            <Skeleton height={28} width={120} radius="var(--radius-pill)" />
+            <Skeleton height={28} width={36} radius="var(--radius-md)" />
+          </div>
+        </div>
+
+        <div className="card mb-4 skeleton-card">
+          <Skeleton height={16} width="30%" />
+          <div style={{ marginTop: 12 }}>
+            <SkeletonLines lines={2} />
+          </div>
+        </div>
+
+        <div className="card mb-4 skeleton-card">
+          <Skeleton height={16} width="20%" />
+          <div style={{ marginTop: 12 }}>
+            <SkeletonLines lines={3} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <Skeleton height={14} width="40%" />
+          </div>
+        </div>
+
+        <div className="card mb-4 skeleton-card">
+          <Skeleton height={16} width="25%" />
+          <div style={{ marginTop: 12 }}>
+            <SkeletonLines lines={4} />
+          </div>
+        </div>
+      </>
+    );
+  }
   if (!lab) return <p>Lab not found.</p>;
 
   const canEditLab = !!user && LAB_WRITE_ROLES.includes(user.role);

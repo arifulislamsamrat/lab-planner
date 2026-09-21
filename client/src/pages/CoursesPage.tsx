@@ -3,7 +3,7 @@ import { useCourses, useCreateCourse, useUpdateCourse } from '../hooks/useCourse
 import CourseTable from '../components/course/CourseTable';
 import CourseForm from '../components/course/CourseForm';
 import Modal from '../components/common/Modal';
-import Spinner from '../components/common/Spinner';
+import { Skeleton, SkeletonPageHeader } from '../components/common/Skeleton';
 import { useAuth } from '../hooks/useAuth';
 import type { Course } from '../types/domain';
 
@@ -20,7 +20,25 @@ export default function CoursesPage() {
 
   const canCreate = !!user && PLANNING_WRITE_ROLES.includes(user.role);
 
-  if (isLoading) return <Spinner label="Loading courses..." />;
+  if (isLoading) {
+    return (
+      <>
+        <SkeletonPageHeader />
+        <div className="toolbar">
+          <Skeleton height={14} width={100} />
+        </div>
+        <div className="card skeleton-card" style={{ marginTop: 16 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--color-border-soft)' }}>
+              <Skeleton height={14} width="40%" />
+              <Skeleton height={14} width={100} />
+              <Skeleton height={14} width={80} />
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

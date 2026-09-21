@@ -1,12 +1,30 @@
 import { Link } from 'react-router-dom';
 import { useDashboardSummary } from '../hooks/useDashboard';
-import Spinner from '../components/common/Spinner';
 import StatusBadge from '../components/common/StatusBadge';
+import { SkeletonStat, Skeleton, SkeletonPageHeader } from '../components/common/Skeleton';
 
 export default function DashboardPage() {
   const { data, isLoading } = useDashboardSummary();
 
-  if (isLoading) return <Spinner label="Loading summary..." />;
+  if (isLoading) {
+    return (
+      <>
+        <SkeletonPageHeader />
+        <div className="stats">
+          <SkeletonStat /><SkeletonStat /><SkeletonStat /><SkeletonStat /><SkeletonStat />
+        </div>
+        <h3 className="mb-3">Recent Courses</h3>
+        <div className="card skeleton-card">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', gap: 16, padding: '10px 0', borderBottom: '1px solid var(--color-border-soft)' }}>
+              <Skeleton height={14} width="50%" />
+              <Skeleton height={14} width={80} />
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
   const { counts, recentCourses } = data!;
 
   return (

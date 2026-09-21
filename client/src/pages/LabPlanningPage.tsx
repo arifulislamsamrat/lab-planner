@@ -13,8 +13,8 @@ import MilestoneForm from '../components/planning/MilestoneForm';
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import EmptyState from '../components/common/EmptyState';
-import Spinner from '../components/common/Spinner';
 import Breadcrumb from '../components/common/Breadcrumb';
+import { Skeleton, SkeletonPageHeader, SkeletonLines } from '../components/common/Skeleton';
 import KanbanBoard from '../components/kanban/KanbanBoard';
 
 type View = 'hierarchy' | 'board';
@@ -34,7 +34,27 @@ export default function LabPlanningPage() {
   const [editing, setEditing] = useState<typeof planning extends undefined ? never : NonNullable<typeof planning>['milestones'][number] | null>(null);
   const [deleting, setDeleting] = useState<NonNullable<typeof planning>['milestones'][number] | null>(null);
 
-  if (isLoading) return <Spinner label="Loading planning..." />;
+  if (isLoading) {
+    return (
+      <>
+        <Breadcrumb items={[{ label: 'Courses', to: '/courses' }, { label: 'Loading…' }]} />
+        <SkeletonPageHeader />
+        <div className="toolbar">
+          <Skeleton height={36} width={140} radius="var(--radius-md)" />
+        </div>
+        <div className="skeleton-stack" style={{ marginTop: 24 }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card skeleton-card">
+              <Skeleton height={20} width="35%" />
+              <div style={{ marginTop: 12 }}>
+                <SkeletonLines lines={2} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
   if (!planning || !course) return <p>Course not found.</p>;
 
   function moveMilestone(m: any, dir: -1 | 1) {

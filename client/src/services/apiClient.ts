@@ -1,12 +1,11 @@
 import axios from 'axios';
 
-// API base URL resolution:
-//   1. VITE_API_BASE env var (set this to override per environment)
-//   2. Hardcoded production default (Render deployment)
-//   3. /api (Vite dev proxy in dev)
-// To redeploy the backend, update the FALLBACK_API_BASE constant below.
-const FALLBACK_API_BASE = 'https://lab-planner-api.onrender.com/api';
-const baseURL = import.meta.env.VITE_API_BASE || FALLBACK_API_BASE || '/api';
+// API base URL resolution order:
+//   1. VITE_API_BASE env var (REQUIRED in production — set this in Vercel)
+//   2. /api (Vite dev proxy when running `npm run dev` locally)
+// In production the client MUST have VITE_API_BASE set, otherwise all API
+// calls fail with "Network Error". See README deploy section.
+const baseURL = import.meta.env.VITE_API_BASE || '/api';
 
 export const TOKEN_KEY = 'lab-planner-token';
 

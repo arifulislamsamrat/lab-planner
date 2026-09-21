@@ -4,10 +4,10 @@ import { useCourse, useUpdateCourse } from '../hooks/useCourses';
 import { useAuth } from '../hooks/useAuth';
 import CourseForm from '../components/course/CourseForm';
 import Modal from '../components/common/Modal';
-import Spinner from '../components/common/Spinner';
 import Breadcrumb from '../components/common/Breadcrumb';
 import StatusBadge from '../components/common/StatusBadge';
 import ShareButton from '../components/common/ShareButton';
+import { Skeleton, SkeletonPageHeader, SkeletonLines } from '../components/common/Skeleton';
 
 export default function CourseDetailsPage() {
   const { courseId = '' } = useParams<{ courseId: string }>();
@@ -18,7 +18,35 @@ export default function CourseDetailsPage() {
 
   const canShareRoadmap = !!user && ['ADMIN', 'COURSE_COORDINATOR', 'INSTRUCTOR'].includes(user.role);
 
-  if (isLoading) return <Spinner label="Loading course..." />;
+  if (isLoading) {
+    return (
+      <>
+        <Breadcrumb items={[{ label: 'Courses', to: '/courses' }, { label: 'Loading…' }]} />
+        <SkeletonPageHeader />
+        <div className="toolbar">
+          <div className="toolbar-right">
+            <Skeleton height={28} width={70} radius="var(--radius-pill)" />
+            <Skeleton height={28} width={120} radius="var(--radius-pill)" />
+            <Skeleton height={28} width={130} radius="var(--radius-pill)" />
+          </div>
+        </div>
+        <nav className="tabs">
+          <Skeleton height={32} width={90} radius="var(--radius-md)" />
+          <Skeleton height={32} width={110} radius="var(--radius-md)" />
+          <Skeleton height={32} width={120} radius="var(--radius-md)" />
+        </nav>
+        <div className="card skeleton-card">
+          <Skeleton height={20} width="30%" />
+          <div style={{ marginTop: 16 }}>
+            <SkeletonLines lines={3} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <Skeleton height={12} width="50%" />
+          </div>
+        </div>
+      </>
+    );
+  }
   if (!course) return <p>Course not found.</p>;
 
   return (

@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { usePublicRoadmap } from '../hooks/usePublicShare';
-import Spinner from '../components/common/Spinner';
 import StatusBadge from '../components/common/StatusBadge';
+import { Skeleton, SkeletonLines } from '../components/common/Skeleton';
 
 /**
  * Public, unauthenticated view of a course's planning tree.
@@ -14,7 +14,36 @@ export default function PublicRoadmapPage() {
   if (isLoading) {
     return (
       <div className="public-shell">
-        <Spinner label="Loading…" />
+        <header className="public-header">
+          <div className="public-brand">
+            <Skeleton height={28} width={28} radius="50%" />
+            <Skeleton height={18} width={100} />
+          </div>
+          <div className="public-tag">
+            <Skeleton height={20} width={130} radius="var(--radius-pill)" />
+          </div>
+        </header>
+        <main className="public-main">
+          <Skeleton height={32} width="50%" />
+          <div style={{ marginTop: 12 }}>
+            <Skeleton height={16} width="70%" />
+          </div>
+          <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Skeleton height={22} width="35%" />
+                  <Skeleton height={20} width={80} radius="var(--radius-pill)" />
+                </div>
+                <SkeletonLines lines={2} lastWidth="60%" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 16 }}>
+                  <Skeleton height={18} width="40%" />
+                  <Skeleton height={18} width="30%" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -32,7 +61,14 @@ export default function PublicRoadmapPage() {
   return (
     <div className="public-shell">
       <header className="public-header">
-        <div className="public-brand">Lab Planner</div>
+        <div className="public-brand">
+          <img
+            src="https://s3.brilliant.com.bd/blog-bucket/thumbnail/8c5225dc-da97-48ab-9736-37d815e14439.png"
+            alt="Lab Planner"
+            className="public-brand-logo"
+          />
+          <span className="public-brand-text">Lab Planner</span>
+        </div>
         <div className="public-tag">Public roadmap</div>
       </header>
       <main className="public-main">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useSidebar } from '../context/SidebarContext';
 import { ROLE_LABELS } from '../types/domain';
 import ThemeToggle from '../components/common/ThemeToggle';
 import SearchBar from '../components/navbar/SearchBar';
@@ -44,6 +45,26 @@ const SignOutIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <path d="M16 17l5-5-5-5M21 12H9" />
+  </svg>
+);
+
+const MenuIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const ChevronLeftIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+const ChevronRightIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 
@@ -133,14 +154,45 @@ function UserMenu() {
 
 export default function AppLayout() {
   const { user } = useAuth();
+  const { desktop, mobileOpen, isMobile, toggleDesktop, closeMobile } = useSidebar();
+  const location = useLocation();
   const showSettings = !!user && SETTINGS_USERS_ROLES.includes(user.role);
   const showDanger = !!user && SETTINGS_DANGER_ROLES.includes(user.role);
   const showMyLabs = !!user && MY_LABS_ROLES.includes(user.role);
 
+  // Close mobile drawer on route change.
+  useEffect(() => {
+    if (mobileOpen) closeMobile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const sidebarClasses = [
+    'app-sidebar',
+    isMobile ? 'sidebar-mobile' : `sidebar-${desktop}`,
+  ].join(' ');
+
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="brand" aria-label="Lab Planner home">Lab Planner</Link>
+        {isMobile && (
+          <button
+            type="button"
+            className="hamburger-btn"
+            onClick={toggleDesktop}
+            aria-label="Open menu"
+            aria-expanded={mobileOpen}
+          >
+            <MenuIcon />
+          </button>
+        )}
+        <Link to="/" className="brand" aria-label="Lab Planner home">
+          <img
+            src="https://s3.brilliant.com.bd/blog-bucket/thumbnail/8c5225dc-da97-48ab-9736-37d815e14439.png"
+            alt="Lab Planner"
+            className="brand-logo"
+          />
+          <span className="brand-text">Lab Planner</span>
+        </Link>
         <SearchBar />
         <div className="header-actions">
           <ThemeToggle />
@@ -148,20 +200,38 @@ export default function AppLayout() {
         </div>
       </header>
       <div className="app-body">
-        <aside className="app-sidebar">
+        {isMobile && mobileOpen && (
+          <div
+            className="sidebar-backdrop"
+            onClick={closeMobile}
+            aria-hidden="true"
+          />
+        )}
+        <aside className={sidebarClasses} aria-hidden={isMobile && !mobileOpen}>
+          {!isMobile && (
+            <button
+              type="button"
+              className="sidebar-collapse-btn"
+              onClick={toggleDesktop}
+              aria-label={desktop === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
+              title={desktop === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
+            >
+              {desktop === 'expanded' ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </button>
+          )}
           <div className="sidebar-section">Workspace</div>
           <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <span className="nav-icon"><DashboardIcon /></span>
-            <span>Dashboard</span>
+            <span className="nav-label">Dashboard</span>
           </NavLink>
           <NavLink to="/courses" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <span className="nav-icon"><CoursesIcon /></span>
-            <span>{user ? coursesLabel(user.role) : 'Courses'}</span>
+            <span className="nav-label">{user ? coursesLabel(user.role) : 'Courses'}</span>
           </NavLink>
           {showMyLabs && (
             <NavLink to="/my-labs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <span className="nav-icon"><MyLabsIcon /></span>
-              <span>My Labs</span>
+              <span className="nav-label">My Labs</span>
             </NavLink>
           )}
 
@@ -170,7 +240,7 @@ export default function AppLayout() {
               <div className="sidebar-section">Administration</div>
               <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon"><SettingsIcon /></span>
-                <span>Settings</span>
+                <span className="nav-label">Settings</span>
               </NavLink>
             </>
           )}
