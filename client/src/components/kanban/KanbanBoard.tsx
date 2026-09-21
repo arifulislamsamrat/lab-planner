@@ -22,14 +22,16 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import { Link } from 'react-router-dom';
 import ActionMenu from '../common/ActionMenu';
-import ShareButton from '../common/ShareButton';
 import { LAB_STATUSES, LAB_STATUS_LABELS, ASSIGNMENT_ROLES } from '../../utils/constants';
 import { useAuth } from '../../hooks/useAuth';
 import { useAssignLab, useUnassignLab } from '../../hooks/useLab';
 import { useQuery } from '@tanstack/react-query';
 import { userApi } from '../../services/userApi';
 import { useUpdateLabStatus, useReorderLabsAcross } from '../../hooks/usePlanningMutations';
+import { useCreateShare } from '../../hooks/useShares';
+import { showToast, toastError } from '../common/Toast';
 import type { CoursePlanningTree, Lab, LabStatus, User } from '../../types/domain';
+import type { ShareKind } from '../../services/shareApi';
 
 /**
  * Lab card metadata used by the board. In single-course mode the location
@@ -359,15 +361,6 @@ function KanbanCard({
               : []),
             { label: 'Open', icon: '↗', onClick: () => { window.location.href = `/labs/${entry.lab._id}`; } },
             { label: 'Set status', icon: '🔁', onClick: () => { /* set-status lives on the status pill itself */ } },
-            ...(canShare
-              ? ([
-                  {
-                    label: 'Share',
-                    icon: '🔗',
-                    onClick: () => { /* share button opens inline below */ },
-                  },
-                ] as const)
-              : []),
           ]}
         />
       </div>
@@ -390,14 +383,7 @@ function KanbanCard({
       <div className="kanban-card-footer" onPointerDown={(e) => e.stopPropagation()}>
         <AssigneeChip ref={assigneeRef} lab={entry.lab} canAssign={canAssign} />
         {canShare && (
-          <ShareButton
-            kind="LAB_README"
-            refId={entry.lab._id}
-            label="Share"
-            description="Anyone with the link can view this lab's readme in their browser. No login required."
-            iconOnly
-            minimal
-          />
+          <KanbanShareButton refId={entry.lab._id} kind="LAB_README" />
         )}
       </div>
     </div>
@@ -616,3 +602,211 @@ const AssigneeChip = forwardRef<AssigneeChipHandle, { lab: Lab; canAssign: boole
     </>
   );
 });
+
+// === Inline share popover (anchored to trigger button, no modal) ===
+
+function buildShareUrl(token: string, kind: ShareKind): string {
+  const path = kind === 'COURSE_ROADMAP' ? 'roadmap' : 'readme';
+  return `${window.location.origin}/share/${path}/${token}`;
+}
+
+interface SharePopoverPosition {
+  top: number;
+  left: number;
+  width: number;
+  upward: boolean;
+}
+
+function computeSharePopoverPosition(
+  triggerEl: HTMLElement | null,
+  popHeight: number,
+  popWidth: number,
+): SharePopoverPosition | null {
+  if (!triggerEl) return null;
+  const rect = triggerEl.getBoundingClientRect();
+  const margin = 8;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const upward = spaceBelow < popHeight + margin && rect.top > spaceBelow;
+  const top = upward
+    ? Math.max(margin, rect.top - margin - popHeight)
+    : rect.bottom + margin;
+  let left = rect.right - popWidth; // align right edge of popover with right edge of trigger
+  if (left + popWidth > window.innerWidth - margin) left = window.innerWidth - popWidth - margin;
+  if (left < margin) left = margin;
+  return { top, left, width: popWidth, upward };
+}
+
+function KanbanShareButton({ refId, kind }: { refId: string; kind: ShareKind }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<SharePopoverPosition | null>(null);
+  const [created, setCreated] = useState<{ id: string; token: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
+  const create = useCreateShare();
+  const popoverId = `share-pop-${refId}`;
+
+  // Reset on close so reopening is fresh.
+  useEffect(() => {
+    if (!open) {
+      // Slight delay so the close animation, if any, can play.
+      const t = window.setTimeout(() => {
+        setCreated(null);
+        setCopied(false);
+      }, 150);
+      return () => window.clearTimeout(t);
+    }
+  }, [open]);
+
+  // Recompute position on open / scroll / resize. Uses fixed positioning so
+  // we don't inherit any clipping/transform from the kanban card tree.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    const recompute = () => {
+      // Measure the popover after content settles; fall back to a sane default.
+      const h = popRef.current?.offsetHeight ?? 140;
+      const w = 300;
+      setPos(computeSharePopoverPosition(triggerRef.current, h, w));
+    };
+    recompute();
+    window.addEventListener('resize', recompute);
+    window.addEventListener('scroll', recompute, true);
+    return () => {
+      window.removeEventListener('resize', recompute);
+      window.removeEventListener('scroll', recompute, true);
+    };
+  }, [open, created]);
+
+  // Close on outside click / Escape.
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t)) return;
+      if (popRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  async function onCreate() {
+    try {
+      const res = await create.mutateAsync({ kind, refId });
+      const wrapped = res as { id?: string; token?: string; share?: { id?: string; token?: string } };
+      const token = wrapped?.token ?? wrapped?.share?.token;
+      const id = wrapped?.id ?? wrapped?.share?.id ?? token;
+      if (token) setCreated({ id: id!, token });
+      showToast('Share link created');
+    } catch (e) {
+      toastError(e);
+    }
+  }
+
+  async function copy(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      showToast('Link copied to clipboard');
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      showToast('Could not copy to clipboard');
+    }
+  }
+
+  const url = created ? buildShareUrl(created.token, kind) : null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="button ghost icon kanban-share-btn"
+        onClick={() => setOpen((o) => !o)}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Share"
+        title="Share"
+      >
+        <span aria-hidden="true">🔗</span>
+      </button>
+      {open && createPortal(
+        <div
+          id={popoverId}
+          ref={popRef}
+          className="kanban-share-pop"
+          role="dialog"
+          aria-label="Share this lab"
+          style={pos ? {
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 99999,
+          } : { position: 'fixed', top: -9999, left: -9999, visibility: 'hidden' }}
+        >
+          <div className="kanban-share-pop-head">
+            <span>Share this lab</span>
+            <button
+              type="button"
+              className="kanban-share-pop-close"
+              onClick={() => setOpen(false)}
+              aria-label="Close share popover"
+            >
+              ×
+            </button>
+          </div>
+          {!created ? (
+            <div className="kanban-share-pop-body">
+              <p className="kanban-share-pop-desc">
+                Create a link anyone can open in their browser. No login required.
+              </p>
+              <button
+                type="button"
+                className="button primary kanban-share-pop-cta"
+                onClick={onCreate}
+                disabled={create.isPending}
+              >
+                {create.isPending ? 'Creating…' : 'Create share link'}
+              </button>
+            </div>
+          ) : (
+            <div className="kanban-share-pop-body">
+              <label className="kanban-share-pop-label">Your shareable link</label>
+              <div className="kanban-share-pop-urlrow">
+                <input
+                  type="text"
+                  readOnly
+                  value={url!}
+                  className="input kanban-share-pop-input"
+                  onFocus={(e) => e.currentTarget.select()}
+                  onClick={(e) => e.currentTarget.select()}
+                  aria-label="Share URL"
+                />
+                <button
+                  type="button"
+                  className="button primary"
+                  onClick={() => copy(url!)}
+                >
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
