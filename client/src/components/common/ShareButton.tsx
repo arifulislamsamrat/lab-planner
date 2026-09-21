@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import { useCreateShare, useRevokeShare, useSharesForRef } from '../../hooks/useShares';
 import { showToast, toastError } from './Toast';
@@ -16,6 +16,8 @@ interface Props {
   label: string;
   /** Optional small description shown above the link list. */
   description?: string;
+  /** When true, render a compact icon-only trigger (used inside tight UI like kanban cards). */
+  iconOnly?: boolean;
 }
 
 function buildShareUrl(token: string, kind: ShareKind): string {
@@ -25,14 +27,26 @@ function buildShareUrl(token: string, kind: ShareKind): string {
   return `${window.location.origin}/share/${path}/${token}`;
 }
 
-export default function ShareButton({ kind, refId, label, description }: Props) {
+export default function ShareButton({ kind, refId, label, description, iconOnly }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <button type="button" className="button" onClick={() => setOpen(true)}>
-        {label}
-      </button>
+      {iconOnly ? (
+        <button
+          type="button"
+          className="button ghost icon share-button-icon"
+          onClick={() => setOpen(true)}
+          aria-label={label}
+          title={label}
+        >
+          <span aria-hidden="true">🔗</span>
+        </button>
+      ) : (
+        <button type="button" className="button" onClick={() => setOpen(true)}>
+          {label}
+        </button>
+      )}
       {open && (
         <ShareDialog
           kind={kind}
@@ -63,11 +77,22 @@ function ShareDialog({
   const create = useCreateShare();
   const revoke = useRevokeShare();
 
+  // Track the ID of the most recently created share so we can highlight *only*
+  // that one, and only briefly after creation. We remember the ID across the
+  // refetch that follows a successful create so the highlight is stable (it
+  // does NOT snap off when the query refetches).
+  const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
+  // Increments each time a create succeeds, used to force a remount of the row
+  // so the CSS highlight animation plays once and never replays on refetch.
+  const [highlightNonce, setHighlightNonce] = useState(0);
+
   async function onCreate() {
     try {
-      await create.mutateAsync({ kind, refId });
-      // The create mutation invalidates the shares query, so the new link will
-      // appear in the list momentarily. The toast confirms success.
+      const created = await create.mutateAsync({ kind, refId });
+      // The new ID is returned by the API; pin it so we can find the row even
+      // if the list order changes.
+      if (created?.id) setLastCreatedId(created.id);
+      setHighlightNonce((n) => n + 1);
       showToast('Link created');
     } catch (e) {
       toastError(e);
@@ -82,10 +107,6 @@ function ShareDialog({
       toastError(e);
     }
   }
-
-  // The newest share gets a brief highlight so the user can spot the one they
-  // just made. After ~3s the highlight fades.
-  const newestId = shares && shares.length > 0 ? shares[0].id : null;
 
   return (
     <Modal
@@ -116,10 +137,16 @@ function ShareDialog({
           <div className="share-empty">No active links yet. Click "Create new link" to make one.</div>
         )}
         {shares?.map((s) => (
+          // Remount via the nonce only when this is the newly created row,
+          // so its one-shot highlight animation runs exactly once.
           <ShareRow
-            key={s.id}
+            key={
+              s.id === lastCreatedId
+                ? `${s.id}-${highlightNonce}`
+                : s.id
+            }
             share={s}
-            highlight={s.id === newestId && create.isSuccess}
+            highlight={s.id === lastCreatedId}
             onRevoke={() => onRevoke(s.id)}
             revoking={revoke.isPending}
           />
@@ -142,6 +169,13 @@ function ShareRow({
 }) {
   const url = buildShareUrl(share.token, share.kind);
   const [copied, setCopied] = useState(false);
+  // Tracks whether this row's highlight animation has already played once;
+  // prevents the row from re-flickering if React re-renders the list.
+  const hasPlayedRef = useRef(false);
+
+  useEffect(() => {
+    if (highlight) hasPlayedRef.current = true;
+  }, [highlight]);
 
   async function copy() {
     try {
@@ -154,8 +188,15 @@ function ShareRow({
     }
   }
 
+  // The CSS animation runs once on mount when `highlight` is true, then the
+  // class is removed by the animation's end-state, so subsequent refetches
+  // that don't change this prop produce no visual flicker.
   return (
-    <div className={`share-row ${highlight ? 'share-row-highlight' : ''}`}>
+    <div
+      className={`share-row ${highlight && !hasPlayedRef.current ? 'share-row-highlight' : ''} ${
+        highlight ? 'share-row-highlighted' : ''
+      }`}
+    >
       <div className="share-row-meta">
         <span className="share-row-date">
           Created {new Date(share.createdAt).toLocaleString()}

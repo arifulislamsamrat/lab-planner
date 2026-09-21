@@ -864,6 +864,30 @@ button.kanban-assignee:hover {
 }
 .kanban-assignee-avatar.danger { background: var(--color-danger); }
 
+/* === Compact share-icon button (used inside kanban cards) === */
+.button.share-button-icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-soft);
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+.button.share-button-icon:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: color-mix(in oklab, var(--color-primary) 40%, var(--color-border-soft));
+  transform: translateY(-1px);
+}
+
 /* === Assignee popover (portal) === */
 .kanban-assignee-pop {
   background: var(--color-surface);
@@ -3063,10 +3087,19 @@ button.node:focus-visible {
   display: flex; flex-direction: column; gap: var(--space-2);
   background: color-mix(in oklab, var(--color-surface) 80%, var(--color-border-soft) 20%);
 }
-.share-row-highlight {
-  border-color: color-mix(in oklab, var(--color-brand) 60%, var(--color-border));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 16%, transparent);
+/* One-shot highlight animation. Plays once when the row mounts with the
+   .share-row-highlight class, then leaves the row in its resting state. */
+@keyframes share-row-highlight-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-brand) 35%, transparent); border-color: color-mix(in oklab, var(--color-brand) 70%, var(--color-border)); background: color-mix(in oklab, var(--color-brand) 10%, var(--color-surface)); }
+  60%  { box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-brand) 18%, transparent); border-color: color-mix(in oklab, var(--color-brand) 60%, var(--color-border)); background: color-mix(in oklab, var(--color-brand) 6%, var(--color-surface)); }
+  100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-brand) 0%, transparent); border-color: var(--color-border-soft); background: color-mix(in oklab, var(--color-surface) 80%, var(--color-border-soft) 20%); }
 }
+.share-row-highlight {
+  animation: share-row-highlight-pulse 1800ms ease-out 1;
+}
+/* The `highlighted` class is purely a marker (currently unused for visual
+   state) — kept stable so tests / debugging can read it. */
+.share-row-highlighted { /* no-op */ }
 .share-row-meta { display: flex; align-items: center; gap: var(--space-2); }
 .share-row-date { font-size: var(--text-xs); color: var(--color-text-muted); }
 .share-row-url-row { display: flex; align-items: center; gap: var(--space-2); }
