@@ -21,7 +21,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link } from 'react-router-dom';
-import ActionMenu from '../common/ActionMenu';
+import ActionMenu, { type ActionMenuHandle } from '../common/ActionMenu';
 import { LAB_STATUSES, LAB_STATUS_LABELS, ASSIGNMENT_ROLES } from '../../utils/constants';
 import { useAuth } from '../../hooks/useAuth';
 import { useAssignLab, useUnassignLab } from '../../hooks/useLab';
@@ -333,6 +333,9 @@ function KanbanCard({
   // Allow the card's ⋮ menu to programmatically reopen the assignee popover
   // (used by the "Reassign" menu item).
   const assigneeRef = useRef<AssigneeChipHandle>(null);
+  // Same trick for the status pill, so the "Set status" menu item opens the
+  // same picker the pill uses.
+  const statusPillRef = useRef<StatusPillHandle>(null);
 
   return (
     <div
@@ -345,7 +348,7 @@ function KanbanCard({
       {/* Top row: status pill (left) + action menu (right).
           Pointer events on these elements skip drag start. */}
       <div className="kanban-card-top" onPointerDown={(e) => e.stopPropagation()}>
-        <StatusPill lab={entry.lab} />
+        <StatusPill ref={statusPillRef} lab={entry.lab} />
         <ActionMenu
           label="Card actions"
           align="right"
@@ -360,7 +363,11 @@ function KanbanCard({
                 ] as const)
               : []),
             { label: 'Open', icon: '↗', onClick: () => { window.location.href = `/labs/${entry.lab._id}`; } },
-            { label: 'Set status', icon: '🔁', onClick: () => { /* set-status lives on the status pill itself */ } },
+            {
+              label: 'Set status',
+              icon: '🔁',
+              onClick: () => statusPillRef.current?.open(),
+            },
           ]}
         />
       </div>
@@ -390,8 +397,26 @@ function KanbanCard({
   );
 }
 
-function StatusPill({ lab }: { lab: Lab }) {
+// === Status pill (clickable, opens status picker) ===
+//
+// We forwardRef + useImperativeHandle so the card's ⋮ menu can programmatically
+// open the same picker via the "Set status" item, matching the assignee chip's
+// "Reassign" pattern.
+
+export interface StatusPillHandle {
+  open: () => void;
+  close: () => void;
+}
+
+const StatusPill = forwardRef<StatusPillHandle, { lab: Lab }>(function StatusPill({ lab }, ref) {
   const updateStatus = useUpdateLabStatus('');
+  const actionMenuRef = useRef<ActionMenuHandle | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    open: () => actionMenuRef.current?.open(),
+    close: () => actionMenuRef.current?.close(),
+  }), []);
+
   const items = LAB_STATUSES.map((s) => ({
     label: LAB_STATUS_LABELS[s],
     icon: s === lab.status ? '✓' : undefined,
@@ -401,6 +426,7 @@ function StatusPill({ lab }: { lab: Lab }) {
   }));
   return (
     <ActionMenu
+      ref={actionMenuRef}
       label={`Status: ${LAB_STATUS_LABELS[lab.status]}. Click to change.`}
       align="left"
       items={items}
@@ -412,7 +438,7 @@ function StatusPill({ lab }: { lab: Lab }) {
       }
     />
   );
-}
+});
 
 // === Assignee chip + popover ===
 

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface MenuItem {
@@ -8,6 +8,12 @@ export interface MenuItem {
   danger?: boolean;
   disabled?: boolean;
   divider?: boolean;
+}
+
+export interface ActionMenuHandle {
+  open: () => void;
+  close: () => void;
+  toggle: () => void;
 }
 
 interface Props {
@@ -68,11 +74,20 @@ function computePosition(
   return { top, left, width, upward };
 }
 
-export default function ActionMenu({ items, trigger, label = 'Actions', align = 'right' }: Props) {
+const ActionMenu = forwardRef<ActionMenuHandle, Props>(function ActionMenu(
+  { items, trigger, label = 'Actions', align = 'right' },
+  ref,
+) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Position | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    open: () => setOpen(true),
+    close: () => setOpen(false),
+    toggle: () => setOpen((o) => !o),
+  }), []);
 
   const setTrigger = (el: HTMLElement | null) => { triggerRef.current = el; };
 
@@ -179,4 +194,6 @@ export default function ActionMenu({ items, trigger, label = 'Actions', align = 
       {dropdown}
     </>
   );
-}
+});
+
+export default ActionMenu;
