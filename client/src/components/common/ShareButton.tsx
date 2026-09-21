@@ -18,6 +18,12 @@ interface Props {
   description?: string;
   /** When true, render a compact icon-only trigger (used inside tight UI like kanban cards). */
   iconOnly?: boolean;
+  /**
+   * When true, the popup is a minimal "Create link & copy" dialog — no list,
+   * no revoke. Use for contextual share actions like the kanban card where a
+   * full manage-links view is overkill. Defaults to false (full manage dialog).
+   */
+  minimal?: boolean;
 }
 
 function buildShareUrl(token: string, kind: ShareKind): string {
@@ -27,7 +33,7 @@ function buildShareUrl(token: string, kind: ShareKind): string {
   return `${window.location.origin}/share/${path}/${token}`;
 }
 
-export default function ShareButton({ kind, refId, label, description, iconOnly }: Props) {
+export default function ShareButton({ kind, refId, label, description, iconOnly, minimal }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -48,19 +54,148 @@ export default function ShareButton({ kind, refId, label, description, iconOnly 
         </button>
       )}
       {open && (
-        <ShareDialog
-          kind={kind}
-          refId={refId}
-          title={label}
-          description={description}
-          onClose={() => setOpen(false)}
-        />
+        minimal ? (
+          <MinimalShareDialog
+            kind={kind}
+            refId={refId}
+            title={label}
+            description={description}
+            onClose={() => setOpen(false)}
+          />
+        ) : (
+          <ManageShareDialog
+            kind={kind}
+            refId={refId}
+            title={label}
+            description={description}
+            onClose={() => setOpen(false)}
+          />
+        )
       )}
     </>
   );
 }
 
-function ShareDialog({
+/**
+ * Minimal share popup: just a "Create link" button. After creation, shows the
+ * URL with a Copy button. No list, no revoke, no manage UI — perfect for the
+ * kanban card use case where the user just wants to share a single link quickly.
+ * This eliminates the loading-then-empty-then-populated flicker that came from
+ * the full list view in the small kanban modal context.
+ */
+function MinimalShareDialog({
+  kind,
+  refId,
+  title,
+  description,
+  onClose,
+}: {
+  kind: ShareKind;
+  refId: string;
+  title: string;
+  description?: string;
+  onClose: () => void;
+}) {
+  const create = useCreateShare();
+  const [created, setCreated] = useState<{ id: string; token: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Reset state every time the dialog mounts so reopening always starts fresh.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      setCreated(null);
+      setCopied(false);
+    };
+  }, []);
+
+  async function onCreate() {
+    try {
+      const res = await create.mutateAsync({ kind, refId });
+      const wrapped = res as { id?: string; token?: string; share?: { id?: string; token?: string } };
+      const token = wrapped?.token ?? wrapped?.share?.token;
+      const id = wrapped?.id ?? wrapped?.share?.id ?? token;
+      if (token) setCreated({ id: id!, token });
+      showToast('Share link created');
+    } catch (e) {
+      toastError(e);
+    }
+  }
+
+  async function copy(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      showToast('Link copied to clipboard');
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      showToast('Could not copy to clipboard');
+    }
+  }
+
+  const url = created ? buildShareUrl(created.token, kind) : null;
+
+  return (
+    <Modal
+      open
+      title={title}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="button subtle" onClick={onClose}>
+            Close
+          </button>
+          {!created && (
+            <button
+              type="button"
+              className="button primary"
+              onClick={onCreate}
+              disabled={create.isPending}
+            >
+              {create.isPending ? 'Creating…' : 'Create share link'}
+            </button>
+          )}
+        </>
+      }
+    >
+      {description && <p className="share-description">{description}</p>}
+
+      {!created ? (
+        <div className="share-minimal-cta">
+          <p className="muted" style={{ margin: 0 }}>
+            Anyone with the link will be able to view this in their browser. No login required.
+          </p>
+        </div>
+      ) : (
+        <div className="share-minimal-result">
+          <label className="share-minimal-label">Your shareable link</label>
+          <div className="share-row-url-row">
+            <input
+              type="text"
+              readOnly
+              value={url!}
+              className="share-row-url"
+              onFocus={(e) => e.currentTarget.select()}
+              onClick={(e) => e.currentTarget.select()}
+              aria-label="Share URL"
+            />
+            <button type="button" className="button primary" onClick={() => copy(url!)}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * Full manage-share dialog: shows existing links with revoke actions and a
+ * "Create new link" button. Used on the Course details / Lab details pages.
+ */
+function ManageShareDialog({
   kind,
   refId,
   title,
@@ -82,15 +217,11 @@ function ShareDialog({
   // refetch that follows a successful create so the highlight is stable (it
   // does NOT snap off when the query refetches).
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
-  // Increments each time a create succeeds, used to force a remount of the row
-  // so the CSS highlight animation plays once and never replays on refetch.
   const [highlightNonce, setHighlightNonce] = useState(0);
 
   async function onCreate() {
     try {
       const created = await create.mutateAsync({ kind, refId });
-      // The new ID is returned by the API; pin it so we can find the row even
-      // if the list order changes.
       if (created?.id) setLastCreatedId(created.id);
       setHighlightNonce((n) => n + 1);
       showToast('Link created');
@@ -137,14 +268,8 @@ function ShareDialog({
           <div className="share-empty">No active links yet. Click "Create new link" to make one.</div>
         )}
         {shares?.map((s) => (
-          // Remount via the nonce only when this is the newly created row,
-          // so its one-shot highlight animation runs exactly once.
           <ShareRow
-            key={
-              s.id === lastCreatedId
-                ? `${s.id}-${highlightNonce}`
-                : s.id
-            }
+            key={s.id === lastCreatedId ? `${s.id}-${highlightNonce}` : s.id}
             share={s}
             highlight={s.id === lastCreatedId}
             onRevoke={() => onRevoke(s.id)}
@@ -169,8 +294,6 @@ function ShareRow({
 }) {
   const url = buildShareUrl(share.token, share.kind);
   const [copied, setCopied] = useState(false);
-  // Tracks whether this row's highlight animation has already played once;
-  // prevents the row from re-flickering if React re-renders the list.
   const hasPlayedRef = useRef(false);
 
   useEffect(() => {
@@ -188,9 +311,6 @@ function ShareRow({
     }
   }
 
-  // The CSS animation runs once on mount when `highlight` is true, then the
-  // class is removed by the animation's end-state, so subsequent refetches
-  // that don't change this prop produce no visual flicker.
   return (
     <div
       className={`share-row ${highlight && !hasPlayedRef.current ? 'share-row-highlight' : ''} ${

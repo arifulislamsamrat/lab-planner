@@ -396,6 +396,7 @@ function KanbanCard({
             label="Share"
             description="Anyone with the link can view this lab's readme in their browser. No login required."
             iconOnly
+            minimal
           />
         )}
       </div>
