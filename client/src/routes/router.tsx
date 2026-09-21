@@ -11,7 +11,9 @@ import SettingsPage from '../pages/SettingsPage';
 import MyLabsPage from '../pages/MyLabsPage';
 import PublicReadmePage from '../pages/PublicReadmePage';
 import PublicRoadmapPage from '../pages/PublicRoadmapPage';
+import KanbanPage from '../pages/KanbanPage';
 import RequireAuth from '../components/auth/RequireAuth';
+import RequireRole from '../components/auth/RequireRole';
 
 export function AppRouter() {
   return (
@@ -36,6 +38,14 @@ export function AppRouter() {
         <Route path="/courses/:courseId/roadmap" element={<RoadmapPage />} />
         <Route path="/labs/:labId" element={<LabDetailsPage />} />
         <Route path="/my-labs" element={<MyLabsPage />} />
+        <Route
+          path="/kanban"
+          element={
+            <RequireRole allow={['ADMIN', 'COURSE_COORDINATOR', 'INSTRUCTOR']}>
+              <KanbanPage />
+            </RequireRole>
+          }
+        />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

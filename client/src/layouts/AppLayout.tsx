@@ -15,6 +15,8 @@ const MY_LABS_ROLES = ['MINION', 'INSTRUCTOR'];
 // Roles that plan / assign / review labs see the full management view.
 // Minions see a read-only "Courses" entry.
 const MANAGE_COURSES_ROLES = ['ADMIN', 'COURSE_COORDINATOR', 'INSTRUCTOR'];
+// Workspace-wide Kanban is visible to roles that manage or review labs.
+const KANBAN_ROLES = ['ADMIN', 'COURSE_COORDINATOR', 'INSTRUCTOR'];
 const coursesLabel = (role: string) =>
   MANAGE_COURSES_ROLES.includes(role) ? 'Manage Courses' : 'Courses';
 
@@ -79,6 +81,14 @@ const MyLabsIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M9 11l3 3L22 4" />
     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+  </svg>
+);
+
+const KanbanIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="4" width="5" height="16" rx="1.5" />
+    <rect x="10" y="4" width="5" height="10" rx="1.5" />
+    <rect x="17" y="4" width="4" height="13" rx="1.5" />
   </svg>
 );
 
@@ -164,6 +174,7 @@ function SidebarContents({ showCloseButton = false, onClose }: { showCloseButton
   const showSettings = !!user && SETTINGS_USERS_ROLES.includes(user.role);
   const showDanger = !!user && SETTINGS_DANGER_ROLES.includes(user.role);
   const showMyLabs = !!user && MY_LABS_ROLES.includes(user.role);
+  const showKanban = !!user && KANBAN_ROLES.includes(user.role);
 
   return (
     <>
@@ -186,6 +197,12 @@ function SidebarContents({ showCloseButton = false, onClose }: { showCloseButton
         <span className="nav-icon"><CoursesIcon /></span>
         <span className="nav-label">{user ? coursesLabel(user.role) : 'Courses'}</span>
       </NavLink>
+      {showKanban && (
+        <NavLink to="/kanban" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <span className="nav-icon"><KanbanIcon /></span>
+          <span className="nav-label">Kanban</span>
+        </NavLink>
+      )}
       {showMyLabs && (
         <NavLink to="/my-labs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <span className="nav-icon"><MyLabsIcon /></span>

@@ -131,7 +131,7 @@ export default function LabPlanningPage() {
           </div>
         )
       ) : (
-        <KanbanBoard courseId={courseId} planning={planning} />
+        <KanbanBoard mode="single" courseId={courseId} planning={planning} />
       )}
 
       <Link to={`/courses/${courseId}`} className="muted" style={{ display: 'inline-block', marginTop: 24 }}>← Back to course</Link>
